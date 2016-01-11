@@ -41,7 +41,10 @@ def request_reviews(token):
             logger.info("=================================================")
             logger.info("Continuing to poll...")
 
-        elif resp.status_code != 404:
+        elif resp.status_code == 404: pass # no submissions available
+        elif resp.status_code == 422: pass # reached assigned submission limit
+
+        else:
             resp.raise_for_status()
 
         time.sleep(1.0 / REQUESTS_PER_SECOND)
