@@ -20,7 +20,10 @@ def request_reviews(token):
     headers = {'Authorization': token, 'Content-Length': '0'}
 
     logger.info("Requesting certifications...")
-    certs = requests.get(CERTS_URL, headers=headers).json()
+    certs_resp = requests.get(CERTS_URL, headers=headers)
+    certs_resp.raise_for_status()
+
+    certs = certs_resp.json()
     project_ids = [cert['project']['id'] for cert in certs if cert['status'] == 'certified']
 
     logger.info("Found certifications for project IDs: {}".format(str(project_ids)))
@@ -28,7 +31,7 @@ def request_reviews(token):
 
     for pid in itertools.cycle(project_ids):
         resp = requests.post(ASSIGN_URL.format(pid = pid), headers=headers)
-        if resp.status_code == requests.codes.created:
+        if resp.status_code == 201:
             submission = resp.json()
 
             logger.info("")
@@ -37,6 +40,9 @@ def request_reviews(token):
             logger.info("View it here: " + REVIEW_URL.format(sid = submission['id']))
             logger.info("=================================================")
             logger.info("Continuing to poll...")
+
+        elif resp.status_code != 404:
+            resp.raise_for_status()
 
         time.sleep(1.0 / REQUESTS_PER_SECOND)
 
