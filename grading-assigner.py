@@ -6,10 +6,8 @@ import os
 import requests
 import time
 
-# Grader config
-PROJECT_IDS = [1, 2]
-
 # Script config
+CERTS_URL = 'http://review-api.udacity.com/api/v1/me/certifications.json'
 ASSIGN_URL = 'http://review-api.udacity.com/api/v1/projects/{pid}/submissions/assign.json'
 REVIEW_URL = 'http://review.udacity.com/#!/submissions/{sid}'
 REQUESTS_PER_SECOND = 1 # Please leave this alone.
@@ -20,11 +18,15 @@ logger.setLevel(logging.INFO)
 
 def request_reviews(token):
     headers = {'Authorization': token, 'Content-Length': '0'}
-    projects = itertools.cycle(PROJECT_IDS)
 
-    logger.info("Script started. Polling for new submissions...")
+    logger.info("Requesting certifications...")
+    certs = requests.get(CERTS_URL, headers=headers).json()
+    project_ids = [cert['project']['id'] for cert in certs if cert['status'] == 'certified']
 
-    for pid in projects:
+    logger.info("Found certifications for project IDs: {}".format(str(project_ids)))
+    logger.info("Polling for new submissions...")
+
+    for pid in itertools.cycle(project_ids):
         resp = requests.post(ASSIGN_URL.format(pid = pid), headers=headers)
         if resp.status_code == requests.codes.created:
             submission = resp.json()
@@ -53,7 +55,7 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     if not args.token:
-	parser.print_usage()
+	parser.print_help()
 	parser.exit()
 
     request_reviews(args.token)
