@@ -15,6 +15,7 @@ optional arguments:
                         `JSON.parse(localStorage.currentUser).token`. This can
                         also be stored in the environment variable
                         UDACITY_AUTH_TOKEN.
+  --debug, -d           Turn on debug statements.
 ```
 
 # Example
