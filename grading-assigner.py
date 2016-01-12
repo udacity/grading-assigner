@@ -41,8 +41,12 @@ def request_reviews(token):
             logger.info("=================================================")
             logger.info("Continuing to poll...")
 
-        elif resp.status_code == 404: pass # no submissions available
-        elif resp.status_code == 422: pass # reached assigned submission limit
+        elif resp.status_code == 404:
+            logger.debug("{} returned {}: No submissions available."
+                .format(resp.url, resp.status_code))
+        elif resp.status_code in [400, 422]:
+            logger.debug("{} returned {}: Assigned submission limit reached."
+                .format(resp.url, resp.status_code))
 
         else:
             resp.raise_for_status()
@@ -61,11 +65,15 @@ if __name__=="__main__":
 	    Your Udacity auth token. To obtain, login to review.udacity.com, open the Javascript console, and copy the output of `JSON.parse(localStorage.currentUser).token`.  This can also be stored in the environment variable UDACITY_AUTH_TOKEN.
 	"""
     )
+    parser.add_argument('--debug', '-d', action='store_true', help='Turn on debug statements.')
     args = parser.parse_args()
 
     if not args.token:
 	parser.print_help()
 	parser.exit()
+
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
 
     request_reviews(args.token)
 
