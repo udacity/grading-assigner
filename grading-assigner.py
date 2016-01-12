@@ -7,9 +7,9 @@ import requests
 import time
 
 # Script config
-CERTS_URL = 'http://review-api.udacity.com/api/v1/me/certifications.json'
-ASSIGN_URL = 'http://review-api.udacity.com/api/v1/projects/{pid}/submissions/assign.json'
-REVIEW_URL = 'http://review.udacity.com/#!/submissions/{sid}'
+CERTS_URL = 'https://review-api.udacity.com/api/v1/me/certifications.json'
+ASSIGN_URL = 'https://review-api.udacity.com/api/v1/projects/{pid}/submissions/assign.json'
+REVIEW_URL = 'https://review.udacity.com/#!/submissions/{sid}'
 REQUESTS_PER_SECOND = 1 # Please leave this alone.
 
 logging.basicConfig(format = '|%(asctime)s| %(message)s')
