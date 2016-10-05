@@ -65,7 +65,9 @@ def wait_for_assign_eligible():
             break
         else:
             logger.info('Waiting for assigned submissions < 2')
-        time.sleep(20.0)
+        # Wait 30 seconds before checking to see if < 2 open submissions
+        # that is, waiting until a create submission request will be permitted
+        time.sleep(30.0)
 
 def refresh_request(current_request):
     logger.info('Refreshing existing request')
@@ -145,7 +147,8 @@ def request_reviews(token):
 
         current_request = alert_for_assignment(current_request, headers)
         if current_request:
-            time.sleep(10.0)
+            # Wait 2 minutes before next check to see if the request has been fulfilled
+            time.sleep(120.0)
 
 if __name__ == "__main__":
     cmd_parser = argparse.ArgumentParser(description =
@@ -158,12 +161,12 @@ if __name__ == "__main__":
 	    Your Udacity auth token. To obtain, login to review.udacity.com, open the Javascript console, and copy the output of `JSON.parse(localStorage.currentUser).token`.  This can also be stored in the environment variable UDACITY_AUTH_TOKEN.
 	"""
     )
-    parser.add_argument('--debug', '-d', action='store_true', help='Turn on debug statements.')
-    args = parser.parse_args()
+    cmd_parser.add_argument('--debug', '-d', action='store_true', help='Turn on debug statements.')
+    args = cmd_parser.parse_args()
 
     if not args.token:
-	cmd_parser.print_help()
-	cmd_parser.exit()
+        cmd_parser.print_help()
+        cmd_parser.exit()
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
