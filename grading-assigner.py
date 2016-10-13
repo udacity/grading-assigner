@@ -34,6 +34,7 @@ logger.setLevel(logging.INFO)
 
 headers = None
 
+# Examples only - Change this with your own list
 PROJECT_IDS = [
   25, # Wrangle OpenStreetMap Data
   26, # Explore and Summarize Data
