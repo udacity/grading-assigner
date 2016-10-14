@@ -40,8 +40,10 @@ def signal_handler(signal, frame):
         logger.info('Cleaning up active request')
         me_resp = requests.get(ME_REQUEST_URL, headers=headers)
         if me_resp.status_code == 200 and len(me_resp.json()) > 0:
-            logger.info(DELETE_URL_TMPL.format(BASE_URL, me_resp.json()[0]['id']))
-            del_resp = requests.delete(DELETE_URL_TMPL.format(BASE_URL, me_resp.json()[0]['id']),
+            logger.info(DELETE_URL_TMPL.format(BASE_URL,
+                                               me_resp.json()[0]['id']))
+            del_resp = requests.delete(DELETE_URL_TMPL.format(BASE_URL,
+                                                              me_resp.json()[0]['id']),
                                        headers=headers)
             logger.info(del_resp)
     sys.exit(0)
@@ -104,11 +106,22 @@ def fetch_certified_pairs():
     return [{'project_id': project_id, 'language': lang} for project_id in project_ids for lang in languages]
 
 
+def choose_categories():
+    language_pair_options = fetch_certified_pairs()
+    logger.info("Here are your available review options:")
+    for lpo in language_pair_options:
+        logger.info("%s: %s" % (language_pair_options.index(lpo), lpo))
+    logger.info("Please enter the index for your selections,")
+    logger.info("seperated by spaces.")
+    options = raw_input("(example: 0 1 2 3) Your choices:")
+    return [language_pair_options[int(i)] for i in options.split(' ')]
+
+
 def request_reviews(token):
     global headers
     headers = {'Authorization': token, 'Content-Length': '0'}
 
-    project_language_pairs = fetch_certified_pairs()
+    project_language_pairs = choose_categories()
     logger.info("Will poll for projects/languages %s", str(project_language_pairs))
 
     me_req_resp = requests.get(ME_REQUEST_URL, headers=headers)
