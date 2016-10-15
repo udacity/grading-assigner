@@ -131,7 +131,7 @@ def request_reviews(token):
             utcnow = datetime.utcnow()
             utcnow = utcnow.replace(tzinfo=pytz.utc)
 
-            if closing_at < utcnow + timedelta(minutes=59):
+            if closing_at < utcnow + timedelta(minutes=30):
                 # Refreshing a request is more costly than just loading
                 # and only needs to be done to ensure the request doesn't
                 # expire (1 hour)
