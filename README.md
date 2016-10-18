@@ -1,6 +1,8 @@
 # Usage
 Requires the `requests` module, which you can either install globally or in a virtualenv.
 
+Install: pip install -r requirements.txt (expects Python to be installed along with pip)
+
 ```
 usage: grading-assigner.py [-h] [--auth-token TOKEN]
 
