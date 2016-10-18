@@ -157,10 +157,10 @@ def projects_to_query(certifications,ids_queued=None):
     if ids_queued is not None:
         print "\n\nSelected projects to queue:\n"
         print "{p[3]:^50} | {p[1]:^5} | {p[2]:^5} | {p[0]:^15} | {p[4]:^50}".format(p=project_description)
-        print "\n\n\n"
         for proj in  proj_info.keys():
             if proj_info[proj][u'id'] in ids_queued:
                 print "{p[name]:50} | {p[id]:^5} | {p[price]:^5} | {p[status]:^15} | {p[hashtag]:50}".format(p=proj_info[proj])
+        print "\n\n\n"
     else:
         print "\n All projects requested!\n"
     
