@@ -107,8 +107,20 @@ def fetch_certified_pairs(ids_queued=None):
         return [x for x in proj_queued if x['project_id'] in ids_queued]
     else:
         return proj_queued
+    
+def get_certifications(token):
+    global headers
+    headers = {'Authorization': token, 'Content-Length': '0'}
+    logger.info("Requesting certifications...")
+    me_resp = requests.get(ME_URL, headers=headers)
+    me_resp.raise_for_status()
+    languages = me_resp.json()['application']['languages'] or ['en-us']
 
-def projects_to_query(certifications,ids_queued=None):
+    certs_resp = requests.get(CERTS_URL, headers=headers)
+    certs_resp.raise_for_status()
+
+    certifications = certs_resp.json()
+    
     # project characteristics to retrieve:
     project_description = [u'status',u'id',u'price',u'name',u'hashtag']
     
@@ -122,15 +134,30 @@ def projects_to_query(certifications,ids_queued=None):
             proj_info[i][field_proj] = certi['project'][field_proj]
         
     # Print in terminal all available projects:
-    print "\n\nAll available projects:\n"
+    print "\n\nPROJECTS AVAILABLE:\n"
     print "{p[3]:^50} | {p[1]:^5} | {p[2]:^5} | {p[0]:^15} | {p[4]:^50}".format(p=project_description)
     for proj in  proj_info.keys():
         print "{p[name]:50} | {p[id]:^5} | {p[price]:^5} | {p[status]:^15} | {p[hashtag]:50}".format(p=proj_info[proj])
-        
+    
+
+def projects_to_query(certifications,ids_queued=None):
+    # project characteristics to retrieve:
+    project_description = [u'status',u'id',u'price',u'name',u'hashtag']
+    
+    # retrieve project information:
+    proj_info = {}
+    
+    for i,certi in enumerate(certifications):
+        proj_info[i] = {}
+        proj_info[i][u'status'] = certi[u'status']
+        for field_proj in project_description[1:]:
+            proj_info[i][field_proj] = certi['project'][field_proj]
+          
     # Select just those projects selected by ids:
     if ids_queued is not None:
         print "\n\nSelected projects to queue:\n"
         print "{p[3]:^50} | {p[1]:^5} | {p[2]:^5} | {p[0]:^15} | {p[4]:^50}".format(p=project_description)
+        print "\n\n\n"
         for proj in  proj_info.keys():
             if proj_info[proj][u'id'] in ids_queued:
                 print "{p[name]:50} | {p[id]:^5} | {p[price]:^5} | {p[status]:^15} | {p[hashtag]:50}".format(p=proj_info[proj])
@@ -207,6 +234,7 @@ if __name__ == "__main__":
     """
     )
     cmd_parser.add_argument('--debug', '-d', action='store_true', help='Turn on debug statements.')
+    cmd_parser.add_argument('--certification', '-c', action='store_true', help='Retrieve current certifications.')
     cmd_parser.add_argument('--ids', '-ids', help='projects ids to queue separated by spaces, i.e.: -ids 28 38 139', dest='ids_queued', nargs='+', type=int, default=config.ids_queued)
     args = cmd_parser.parse_args()
 
@@ -216,5 +244,8 @@ if __name__ == "__main__":
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
-    
-    request_reviews(args.token, args.ids_queued)
+        
+    if args.certification:
+        get_certifications(args.token)
+    else:    
+        request_reviews(args.token, args.ids_queued)
