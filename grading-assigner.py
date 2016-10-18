@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import signal
 import sys
 import argparse
@@ -9,6 +10,7 @@ import time
 import pytz
 from dateutil import parser
 from datetime import datetime, timedelta
+import config
 
 utc = pytz.UTC
 
@@ -80,7 +82,7 @@ def refresh_request(current_request):
     else:
         return refresh_resp.json()
 
-def fetch_certified_pairs():
+def fetch_certified_pairs(ids_queued=None):
     logger.info("Requesting certifications...")
     me_resp = requests.get(ME_URL, headers=headers)
     me_resp.raise_for_status()
@@ -90,23 +92,93 @@ def fetch_certified_pairs():
     certs_resp.raise_for_status()
 
     certs = certs_resp.json()
+    
     project_ids = [cert['project']['id'] for cert in certs if cert['status'] == 'certified']
 
     logger.info("Found certifications for project IDs: %s in languages %s",
                 str(project_ids), str(languages))
     logger.info("Polling for new submissions...")
+    
+    projects_to_query(certs,ids_queued)
+    
+    proj_queued = [{'project_id': project_id, 'language': lang} for project_id in project_ids  for lang in languages]
 
-    return [{'project_id': project_id, 'language': lang} for project_id in project_ids for lang in languages]
+    if ids_queued is not None:
+        return [x for x in proj_queued if x['project_id'] in ids_queued]
+    else:
+        return proj_queued
+    
+def get_certifications(token):
+    global headers
+    headers = {'Authorization': token, 'Content-Length': '0'}
+    logger.info("Requesting certifications...")
+    me_resp = requests.get(ME_URL, headers=headers)
+    me_resp.raise_for_status()
+    languages = me_resp.json()['application']['languages'] or ['en-us']
 
-def request_reviews(token):
+    certs_resp = requests.get(CERTS_URL, headers=headers)
+    certs_resp.raise_for_status()
+
+    certifications = certs_resp.json()
+    
+    # project characteristics to retrieve:
+    project_description = [u'status',u'id',u'price',u'name',u'hashtag']
+    
+    # retrieve project information:
+    proj_info = {}
+    
+    for i,certi in enumerate(certifications):
+        proj_info[i] = {}
+        proj_info[i][u'status'] = certi[u'status']
+        for field_proj in project_description[1:]:
+            proj_info[i][field_proj] = certi['project'][field_proj]
+        
+    # Print in terminal all available projects:
+    print "\n\nPROJECTS AVAILABLE:\n"
+    print "{p[3]:^50} | {p[1]:^5} | {p[2]:^5} | {p[0]:^15} | {p[4]:^50}".format(p=project_description)
+    for proj in  proj_info.keys():
+        print "{p[name]:50} | {p[id]:^5} | {p[price]:^5} | {p[status]:^15} | {p[hashtag]:50}".format(p=proj_info[proj])
+    
+
+def projects_to_query(certifications,ids_queued=None):
+    # project characteristics to retrieve:
+    project_description = [u'status',u'id',u'price',u'name',u'hashtag']
+    
+    # retrieve project information:
+    proj_info = {}
+    
+    for i,certi in enumerate(certifications):
+        proj_info[i] = {}
+        proj_info[i][u'status'] = certi[u'status']
+        for field_proj in project_description[1:]:
+            proj_info[i][field_proj] = certi['project'][field_proj]
+          
+    # Select just those projects selected by ids:
+    if ids_queued is not None:
+        print "\n\nSelected projects to queue:\n"
+        print "{p[3]:^50} | {p[1]:^5} | {p[2]:^5} | {p[0]:^15} | {p[4]:^50}".format(p=project_description)
+        for proj in  proj_info.keys():
+            if proj_info[proj][u'id'] in ids_queued:
+                print "{p[name]:50} | {p[id]:^5} | {p[price]:^5} | {p[status]:^15} | {p[hashtag]:50}".format(p=proj_info[proj])
+        print "\n\n\n"
+    else:
+        print "\n All projects requested!\n"
+    
+
+def request_reviews(token,ids_queued=None):
     global headers
     headers = {'Authorization': token, 'Content-Length': '0'}
 
-    project_language_pairs = fetch_certified_pairs()
+    project_language_pairs = fetch_certified_pairs(ids_queued)
+    if len(project_language_pairs) == 0:
+        print "No available projects to query. PROGRAM STOP"
+        return
     logger.info("Will poll for projects/languages %s", str(project_language_pairs))
-
+    
     me_req_resp = requests.get(ME_REQUEST_URL, headers=headers)
     current_request = me_req_resp.json()[0] if me_req_resp.status_code == 201 and len(me_req_resp.json()) > 0 else None
+    
+
     if current_request:
         update_resp = requests.put(PUT_REQUEST_URL_TMPL.format(BASE_URL, current_request['id']),
                                    json={'projects': project_language_pairs}, headers=headers)
@@ -149,19 +221,21 @@ def request_reviews(token):
         if current_request:
             # Wait 2 minutes before next check to see if the request has been fulfilled
             time.sleep(120.0)
-
+    
 if __name__ == "__main__":
     cmd_parser = argparse.ArgumentParser(description =
-	"Poll the Udacity reviews API to claim projects to review."
+    "Poll the Udacity reviews API to claim projects to review."
     )
     cmd_parser.add_argument('--auth-token', '-T', dest='token',
-	metavar='TOKEN', type=str,
-	action='store', default=os.environ.get('UDACITY_AUTH_TOKEN'),
-	help="""
-	    Your Udacity auth token. To obtain, login to review.udacity.com, open the Javascript console, and copy the output of `JSON.parse(localStorage.currentUser).token`.  This can also be stored in the environment variable UDACITY_AUTH_TOKEN.
-	"""
+    metavar='TOKEN', type=str,
+    action='store', default=os.environ.get('UDACITY_AUTH_TOKEN'),
+    help="""
+        Your Udacity auth token. To obtain, login to review.udacity.com, open the Javascript console, and copy the output of `JSON.parse(localStorage.currentUser).token`.  This can also be stored in the environment variable UDACITY_AUTH_TOKEN.
+    """
     )
     cmd_parser.add_argument('--debug', '-d', action='store_true', help='Turn on debug statements.')
+    cmd_parser.add_argument('--certification', '-c', action='store_true', help='Retrieve current certifications.')
+    cmd_parser.add_argument('--ids', '-ids', help='projects ids to queue separated by spaces, i.e.: -ids 28 38 139', dest='ids_queued', nargs='+', type=int, default=config.ids_queued)
     args = cmd_parser.parse_args()
 
     if not args.token:
@@ -170,6 +244,8 @@ if __name__ == "__main__":
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
-
-    request_reviews(args.token)
-
+        
+    if args.certification:
+        get_certifications(args.token)
+    else:    
+        request_reviews(args.token, args.ids_queued)
