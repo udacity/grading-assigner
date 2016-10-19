@@ -11,6 +11,7 @@ import pytz
 from dateutil import parser
 from datetime import datetime, timedelta
 import config
+import subprocess
 
 utc = pytz.UTC
 
@@ -51,6 +52,8 @@ signal.signal(signal.SIGINT, signal_handler)
 
 def alert_for_assignment(current_request, headers):
     if current_request and current_request['status'] == 'fulfilled':
+        subprocess.call(['speech-dispatcher'])        #start speech dispatcher
+        subprocess.call(['spd-say', '"Hello, you have been assigned to grade a new submission"'])
         logger.info("")
         logger.info("=================================================")
         logger.info("You have been assigned to grade a new submission!")
