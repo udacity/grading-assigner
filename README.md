@@ -2,7 +2,9 @@
 Requires the `requests` module, which you can either install globally or in a virtualenv.
 
 ```
-usage: grading-assigner.py [-h] [--auth-token TOKEN]
+usage: grading-assigner.py [-h] [--auth-token TOKEN] [--debug]
+                           [--certification]
+                           [--ids IDS_QUEUED [IDS_QUEUED ...]]
 
 Poll the Udacity reviews API to claim projects to review.
 
@@ -16,35 +18,32 @@ optional arguments:
                         also be stored in the environment variable
                         UDACITY_AUTH_TOKEN.
   --debug, -d           Turn on debug statements.
+  --certification, -c   Retrieve current certifications.
+  --ids IDS_QUEUED [IDS_QUEUED ...], -ids IDS_QUEUED [IDS_QUEUED ...]
+                        projects ids to queue separated by spaces, i.e.: -ids 28 38 139
+
 ```
 
 # Example
 ```
-$ export UDACITY_AUTH_TOKEN=...
-$ ./grading-assigner.py
-|2016-08-03 19:28:44,766| Requesting certifications...
-|2016-08-03 19:28:45,357| Found certifications for project IDs: [2, 3] in languages [u'pt', u'en']
-|2016-08-03 19:28:45,358| Polling for new submissions...
-|2016-08-03 19:28:45,358| Will poll for projects/languages [{'project_id': 2,
-'language': u'pt'}, {'project_id': 2, 'language': u'en'}, {'project_id': 3,
-'language': u'pt'}, {'project_id': 3, 'language': u'en'}]
-|2016-08-03 19:28:45,751| Creating a request for 2 project(s) in 2 languages
-|2016-08-03 19:28:47,876|
-|2016-08-03 19:28:47,876| =================================================
-|2016-08-03 19:28:47,876| You have been assigned to grade a new submission!
-|2016-08-03 19:28:47,876| View it here: https://review.udacity.com/#!/submissions/237
-|2016-08-03 19:28:47,876| =================================================
-|2016-08-03 19:28:47,876| Continuing to poll...
-|2016-08-03 19:28:48,042| Creating a request for 2 project(s) in 2 languages
-|2016-08-03 19:28:50,177|
-|2016-08-03 19:28:50,178| =================================================
-|2016-08-03 19:28:50,178| You have been assigned to grade a new submission!
-|2016-08-03 19:28:50,178| View it here: https://review.udacity.com/#!/submissions/238
-|2016-08-03 19:28:50,178| =================================================
-|2016-08-03 19:28:50,178| Continuing to poll...
-|2016-08-03 19:28:50,353| Waiting for assigned submissions < 2
-|2016-08-03 19:28:55,531| Waiting for assigned submissions < 2
-^C|2016-08-03 19:28:56,591| Cleaning up active request
+python grading_assigment.py -ids 107 104 147
+|2016-10-18 10:23:04,097| Requesting certifications...
+|2016-10-18 10:23:05,334| Found certifications for project IDs: [104, 106, 108, 147, 234, 105, 236, 235, 107, 28, 27, 103] in languages [u'es', u'en']
+|2016-10-18 10:23:05,334| Polling for new submissions...
+
+
+Selected projects to queue:
+
+                       name                        |  id   | price |     status      |                      hashtag                      
+Building a Student Intervention System             |  104  | 45.0  |    certified    | nanodegree,machinelearning                        
+Titanic Survival Exploration                       |  147  |  7.0  |    certified    | nanodegree,machinelearning                        
+Investigate a Dataset                              |  107  | 50.0  |    certified    | nanodegree,dataanalysis                           
+
+
+
+
+|2016-10-18 10:23:05,335| Will poll for projects/languages [{'project_id': 104, 'language': u'es'}, {'project_id': 104, 'language': u'en'}, {'project_id': 147, 'language': u'es'}, {'project_id': 147, 'language': u'en'}, {'project_id': 107, 'language': u'es'}, {'project_id': 107, 'language': u'en'}]
+|2016-10-18 10:23:06,348| Waiting for assigned submissions < 2
 ```
 
 Press ctrl-c to quit.
