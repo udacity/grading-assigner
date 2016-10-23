@@ -106,7 +106,7 @@ def request_reviews(token):
     logger.info("Will poll for projects/languages %s", str(project_language_pairs))
 
     me_req_resp = requests.get(ME_REQUEST_URL, headers=headers)
-    current_request = me_req_resp.json()[0] if me_req_resp.status_code == 201 and len(me_req_resp.json()) > 0 else None
+    current_request = me_req_resp.json()[0] if me_req_resp.status_code == 200 and len(me_req_resp.json()) > 0 else None
     if current_request:
         update_resp = requests.put(PUT_REQUEST_URL_TMPL.format(BASE_URL, current_request['id']),
                                    json={'projects': project_language_pairs}, headers=headers)
