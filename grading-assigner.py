@@ -24,7 +24,7 @@ PUT_REQUEST_URL_TMPL = '{}/submission_requests/{}.json'
 REFRESH_URL_TMPL = '{}/submission_requests/{}/refresh.json'
 ASSIGNED_COUNT_URL = '{}/me/submissions/assigned_count.json'.format(BASE_URL)
 ASSIGNED_URL = '{}/me/submissions/assigned.json'.format(BASE_URL)
-
+QUEUE_POSITION_URL = '{}/submission_requests/{}/waits.json'
 REVIEW_URL = 'https://review.udacity.com/#!/submissions/{sid}'
 REQUESTS_PER_SECOND = 1 # Please leave this alone.
 
@@ -144,6 +144,11 @@ def request_reviews(token):
                 url = GET_REQUEST_URL_TMPL.format(BASE_URL, current_request['id'])
                 get_req_resp = requests.get(url, headers=headers)
                 current_request = get_req_resp.json() if me_req_resp.status_code == 200 else None
+                #prints out response from how many reviewers are in front of you         
+                reviewers_queue = requests.get(QUEUE_POSITION_URL.format(BASE_URL,current_request['id']),
+                                headers=headers)
+                queue_response = reviewers_queue.json()
+                logger.info(queue_response)
 
         current_request = alert_for_assignment(current_request, headers)
         if current_request:
