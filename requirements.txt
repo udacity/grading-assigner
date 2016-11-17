@@ -1,1 +1,4 @@
 requests==2.9.1
+tabulate==0.7.5
+pandas==0.18.1
+

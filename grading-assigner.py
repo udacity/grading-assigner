@@ -10,8 +10,15 @@ import time
 import pytz
 from dateutil import parser
 from datetime import datetime, timedelta
+
+import report_generator
 import config
+
+import pandas
+import json
+
 import subprocess
+import pickle
 
 utc = pytz.UTC
 
@@ -35,6 +42,7 @@ logging.basicConfig(format='|%(asctime)s| %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+current_date = datetime.now().strftime('%Y-%m-%d')
 headers = None
 
 def signal_handler(signal, frame):
@@ -166,8 +174,56 @@ def projects_to_query(certifications,ids_queued=None):
         print "\n\n\n"
     else:
         print "\n All projects requested!\n"
+        
+def get_positions(certifications,ids_queue,curr_request_id):
+    WAITS_URL = '{0}/submission_requests/{1}/waits.json'.format(BASE_URL,curr_request_id)
+    wait_resp = requests.get(WAITS_URL, headers=headers)
+    wait_resp.raise_for_status()
+    waits = wait_resp.json()
+    print waits
     
-
+def retrieve_stats(token,start_date='2010-01-01',end_date=current_date):
+    global headers
+    headers = {'Authorization': token, 'Content-Length': '0'}
+    logger.info("Requesting Projects information...")
+    
+    # retrieve projects completed:
+    COMPLETED_URL_TMPL = '{0}/me/submissions/completed?start_date={1}&end_date={2}.json'.format(BASE_URL,start_date,end_date)
+    completed_resp = requests.get(COMPLETED_URL_TMPL, headers=headers)
+    completed_resp = completed_resp.json() if completed_resp.status_code == 200 else None
+    #pickle.dump( completed_resp, open( "completed.pickle", "wb" ) )
+    
+    # retrieve feedbacks:
+    FEEDBACK_URL_TMPL = '{0}/me/student_feedbacks?start_date={1}&end_date={2}.json'.format(BASE_URL,start_date,end_date)
+    fb_resp = requests.get(FEEDBACK_URL_TMPL, headers=headers)
+    fb_resp = fb_resp.json() if fb_resp.status_code == 200 else None
+    #pickle.dump( fb_resp, open( "fb.pickle", "wb" ) )
+    
+    #################################################################    
+    ## Read input data:
+    #################################################################
+    #projects = pickle.load(open('/home/rafaelcastillo/Downloads/completed.pickle','rb'))
+    dfproj = pandas.read_json(json.dumps(completed_resp))
+    dfproj = dfproj.loc[:,[u'completed_at',u'project',u'price',u'status',u'id',u'is_training',u'result']]
+    dfproj = dfproj.rename(columns={u'id':u'submission_id'})
+    
+    #fb = pickle.load(open('/home/rafaelcastillo/Downloads/fb.pickle','rb'))
+    df_fb = pandas.read_json(json.dumps(fb_resp))
+    df_fb = df_fb.loc[:,[u'submission_id',u'rating',u'body',u'created_at']]
+    
+    ## Merge both dataframes and do the required transformations to create plots and tables:
+    df_all =  dfproj.merge(df_fb,how='left',on=u'submission_id')
+    file_text, project_names,project_colors = report_generator.generate_report(df_all.copy())
+    file_text = report_generator.generate_project_report(df_all.copy(),project_names,project_colors,file_text)
+    file_text += report_generator.project_text_foot
+    
+    ## Save file:
+    f = open(config.path_out + config.file_name + '.md','w')
+    f.write(file_text)
+    f.close()
+    
+    
+    
 def request_reviews(token,ids_queued=None):
     global headers
     headers = {'Authorization': token, 'Content-Length': '0'}
@@ -238,7 +294,8 @@ if __name__ == "__main__":
     )
     cmd_parser.add_argument('--debug', '-d', action='store_true', help='Turn on debug statements.')
     cmd_parser.add_argument('--certification', '-c', action='store_true', help='Retrieve current certifications.')
-    cmd_parser.add_argument('--ids', '-ids', help='projects ids to queue separated by spaces, i.e.: -ids 28 38 139', dest='ids_queued', nargs='+', type=int, default=config.ids_queued)
+    cmd_parser.add_argument('--ids', '-ids', help='Projects ids to queue separated by spaces, i.e.: -ids 28 38 139', dest='ids_queued', nargs='+', type=int, default=config.ids_queued)
+    cmd_parser.add_argument('--stats', '-stats', action='store_true', help='Retrieve stats for all projects')
     args = cmd_parser.parse_args()
 
     if not args.token:
@@ -250,5 +307,7 @@ if __name__ == "__main__":
         
     if args.certification:
         get_certifications(args.token)
+    elif args.stats:
+        retrieve_stats(args.token)   
     else:    
         request_reviews(args.token, args.ids_queued)

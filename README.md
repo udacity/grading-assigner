@@ -21,6 +21,8 @@ optional arguments:
   --certification, -c   Retrieve current certifications.
   --ids IDS_QUEUED [IDS_QUEUED ...], -ids IDS_QUEUED [IDS_QUEUED ...]
                         projects ids to queue separated by spaces, i.e.: -ids 28 38 139
+  --stats, -stats       Retrieve stats for all projects
+
 
 ```
 
