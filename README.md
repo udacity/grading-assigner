@@ -49,3 +49,8 @@ Investigate a Dataset                              |  107  | 50.0  |    certifie
 ```
 
 Press ctrl-c to quit.
+
+# Report example:
+
+<img src="Selection_265.jpg" =100x>
+
