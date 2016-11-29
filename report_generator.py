@@ -43,21 +43,25 @@ def plot_monthly(df,ax,variable,project_colors):
     return ax 
     
 def plot_rating(data,ax,period,project_name=None):
-    '''Function to represent ratings'''
-    ratings = data[[u'created_at',u'rating',u'project']].dropna().sort_values(by=u'created_at',ascending=True).reset_index(drop=True)
-    ratings[u'project_name'] =ratings[u'project'].apply(lambda x: x[u'name'],1)  
-    ratings[u'created_at'] = pandas.to_datetime(ratings[u'created_at'], format='%Y-%b-%d:%H:%M:%S.%f')
-    ratings[u'avg'] = ratings[u'rating'].cumsum() / (ratings.index + 1)
-    ratings[u'avg_{0}days'.format(period)] = ratings.apply(lambda row: get_average(ratings,row,period),1)
-    
-    
+    '''Function to represent ratings'''  
     if project_name is not None: 
+        ratings = data[[u'created_at',u'rating',u'project']].dropna().sort_values(by=u'created_at',ascending=True).reset_index(drop=True)
+        ratings[u'project_name'] =ratings[u'project'].apply(lambda x: x[u'name'],1) 
         ratings = ratings.loc[ratings[u'project_name']== project_name,:].reset_index(drop=True)
+        if ratings.shape[0] == 0: return ax.axis('off')
+        ratings[u'created_at'] = pandas.to_datetime(ratings[u'created_at'], format='%Y-%b-%d:%H:%M:%S.%f')
+        ratings[u'avg'] = ratings[u'rating'].cumsum() / (ratings.index + 1)
+        ratings[u'avg_{0}days'.format(period)] = ratings.apply(lambda row: get_average(ratings,row,period),1)
         current_avg_period = np.round(ratings.loc[ratings.shape[0]-1,u'avg_30days'],2)
         current_avg = np.round(ratings.loc[ratings.shape[0]-1,u'avg'],2)
         title = 'Project: {3}\nCurrent {0} days average: {1} and full period average: {2}'.format(period,current_avg_period,current_avg,project_name)
         projects = project_name
     else:
+        ratings = data[[u'created_at',u'rating',u'project']].dropna().sort_values(by=u'created_at',ascending=True).reset_index(drop=True)
+        ratings[u'project_name'] =ratings[u'project'].apply(lambda x: x[u'name'],1)  
+        ratings[u'created_at'] = pandas.to_datetime(ratings[u'created_at'], format='%Y-%b-%d:%H:%M:%S.%f')
+        ratings[u'avg'] = ratings[u'rating'].cumsum() / (ratings.index + 1)
+        ratings[u'avg_{0}days'.format(period)] = ratings.apply(lambda row: get_average(ratings,row,period),1)
         current_avg_period = np.round(ratings.loc[ratings.shape[0]-1,u'avg_30days'],2)
         current_avg = np.round(ratings.loc[ratings.shape[0]-1,u'avg'],2)
         title = 'Current {0} days average: {1} and full period average: {2}'.format(period,current_avg_period,current_avg)
