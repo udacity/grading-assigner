@@ -145,7 +145,7 @@ def generate_report(df_all):
     start_date = df_general.index.min()
     end_date = df_general.index.max()
     summary_table = tabulate([list(row) for row in df_results.round(2).values], headers=list(df_results.columns),tablefmt="pipe", numalign="center")
-    fig, axes = plt.subplots(nrows=2, ncols=1)
+    fig, axes = plt.subplots(nrows=2, ncols=1,figsize=(10,10))
     axes[0] = plot_monthly(df_general,axes[0],u'earnings',project_colors)
     axes[1] = plot_rating(df_all.copy(),axes[1],period)
     monthly_plot_path = config.path_out + 'general.png'
