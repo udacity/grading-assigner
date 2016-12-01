@@ -34,6 +34,17 @@ logger.setLevel(logging.INFO)
 
 headers = None
 
+# Examples only - Change this with your own list
+PROJECT_IDS = [
+  25, # Wrangle OpenStreetMap Data
+  26, # Explore and Summarize Data
+  27, # Identify Fraud from Enron Email
+  28, # Make Effective Data Visualization
+  53, # Resume Review
+  103, # Predicting Boston Housing Prices
+  106, # Train a Smartcab to Drive
+]
+
 def signal_handler(signal, frame):
     if headers:
         logger.info('Cleaning up active request')
@@ -90,13 +101,14 @@ def fetch_certified_pairs():
     certs_resp.raise_for_status()
 
     certs = certs_resp.json()
-    project_ids = [cert['project']['id'] for cert in certs if cert['status'] == 'certified']
+    project_ids_and_names = [(cert['project']['id'], cert['project']['name']) for cert in certs if cert['status'] == 'certified' and cert['project']['id'] in PROJECT_IDS]
+    project_ids, project_names = zip(*project_ids_and_names)
 
     logger.info("Found certifications for project IDs: %s in languages %s",
                 str(project_ids), str(languages))
     logger.info("Polling for new submissions...")
 
-    return [{'project_id': project_id, 'language': lang} for project_id in project_ids for lang in languages]
+    return [{'project_id': project_id, 'project_name': project_names[pid], 'language': lang} for pid, project_id in enumerate(project_ids) for lang in languages]
 
 def request_reviews(token):
     global headers
@@ -152,14 +164,14 @@ def request_reviews(token):
 
 if __name__ == "__main__":
     cmd_parser = argparse.ArgumentParser(description =
-	"Poll the Udacity reviews API to claim projects to review."
+    "Poll the Udacity reviews API to claim projects to review."
     )
     cmd_parser.add_argument('--auth-token', '-T', dest='token',
-	metavar='TOKEN', type=str,
-	action='store', default=os.environ.get('UDACITY_AUTH_TOKEN'),
-	help="""
-	    Your Udacity auth token. To obtain, login to review.udacity.com, open the Javascript console, and copy the output of `JSON.parse(localStorage.currentUser).token`.  This can also be stored in the environment variable UDACITY_AUTH_TOKEN.
-	"""
+    metavar='TOKEN', type=str,
+    action='store', default=os.environ.get('UDACITY_AUTH_TOKEN'),
+    help="""
+        Your Udacity auth token. To obtain, login to review.udacity.com, open the Javascript console, and copy the output of `JSON.parse(localStorage.currentUser).token`.  This can also be stored in the environment variable UDACITY_AUTH_TOKEN.
+    """
     )
     cmd_parser.add_argument('--debug', '-d', action='store_true', help='Turn on debug statements.')
     args = cmd_parser.parse_args()
@@ -172,4 +184,3 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
 
     request_reviews(args.token)
-
