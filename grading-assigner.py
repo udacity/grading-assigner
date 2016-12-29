@@ -192,6 +192,9 @@ def retrieve_stats(token,start_date='2010-01-01',end_date=current_date):
     completed_resp = requests.get(COMPLETED_URL_TMPL, headers=headers)
     completed_resp = completed_resp.json() if completed_resp.status_code == 200 else None
     #pickle.dump( completed_resp, open( "completed.pickle", "wb" ) )
+    if completed_resp is None:
+        print "We can't process your request: Response returns None, check your token, internet connection, etc."
+        return
     
     # retrieve feedbacks:
     FEEDBACK_URL_TMPL = '{0}/me/student_feedbacks?start_date={1}&end_date={2}.json'.format(BASE_URL,start_date,end_date)
