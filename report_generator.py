@@ -43,21 +43,25 @@ def plot_monthly(df,ax,variable,project_colors):
     return ax 
     
 def plot_rating(data,ax,period,project_name=None):
-    '''Function to represent ratings'''
-    ratings = data[[u'created_at',u'rating',u'project']].dropna().sort_values(by=u'created_at',ascending=True).reset_index(drop=True)
-    ratings[u'project_name'] =ratings[u'project'].apply(lambda x: x[u'name'],1)  
-    ratings[u'created_at'] = pandas.to_datetime(ratings[u'created_at'], format='%Y-%b-%d:%H:%M:%S.%f')
-    ratings[u'avg'] = ratings[u'rating'].cumsum() / (ratings.index + 1)
-    ratings[u'avg_{0}days'.format(period)] = ratings.apply(lambda row: get_average(ratings,row,period),1)
-    
-    
+    '''Function to represent ratings'''  
     if project_name is not None: 
+        ratings = data[[u'created_at',u'rating',u'project']].dropna().sort_values(by=u'created_at',ascending=True).reset_index(drop=True)
+        ratings[u'project_name'] =ratings[u'project'].apply(lambda x: x[u'name'],1) 
         ratings = ratings.loc[ratings[u'project_name']== project_name,:].reset_index(drop=True)
+        if ratings.shape[0] == 0: return ax.axis('off')
+        ratings[u'created_at'] = pandas.to_datetime(ratings[u'created_at'], format='%Y-%b-%d:%H:%M:%S.%f')
+        ratings[u'avg'] = ratings[u'rating'].cumsum() / (ratings.index + 1)
+        ratings[u'avg_{0}days'.format(period)] = ratings.apply(lambda row: get_average(ratings,row,period),1)
         current_avg_period = np.round(ratings.loc[ratings.shape[0]-1,u'avg_30days'],2)
         current_avg = np.round(ratings.loc[ratings.shape[0]-1,u'avg'],2)
         title = 'Project: {3}\nCurrent {0} days average: {1} and full period average: {2}'.format(period,current_avg_period,current_avg,project_name)
         projects = project_name
     else:
+        ratings = data[[u'created_at',u'rating',u'project']].dropna().sort_values(by=u'created_at',ascending=True).reset_index(drop=True)
+        ratings[u'project_name'] =ratings[u'project'].apply(lambda x: x[u'name'],1)  
+        ratings[u'created_at'] = pandas.to_datetime(ratings[u'created_at'], format='%Y-%b-%d:%H:%M:%S.%f')
+        ratings[u'avg'] = ratings[u'rating'].cumsum() / (ratings.index + 1)
+        ratings[u'avg_{0}days'.format(period)] = ratings.apply(lambda row: get_average(ratings,row,period),1)
         current_avg_period = np.round(ratings.loc[ratings.shape[0]-1,u'avg_30days'],2)
         current_avg = np.round(ratings.loc[ratings.shape[0]-1,u'avg'],2)
         title = 'Current {0} days average: {1} and full period average: {2}'.format(period,current_avg_period,current_avg)
@@ -94,6 +98,22 @@ def get_agg_results(df_general,proj_name=None):
     df_general.loc[:,u'min_rated'] = df_general[u'rating']
     df_general.loc[:,u'max_rated'] = df_general[u'rating']
     df_general.loc[:,u'%_passed'] = df_general[u'result']
+    
+    # Group results by year and month
+    df_summary = df_general.groupby([u'year',u'month'],as_index=False).agg(
+                                                                            {u'project':'count',
+                                                                             u'rating':'mean',
+                                                                             u'max_rated':'max',
+                                                                             u'min_rated':'min',
+                                                                             u'%_rated':count_rated,
+                                                                             u'%_passed':count_passed,
+                                                                             u'price':'sum'
+                                                                             }).sort_values(by=[u'year',u'month'])
+    df_summary.rename(columns={u'price':u'earnings',u'project':u'count'},inplace=True)
+    df_summary.loc[:,u'date_time']= df_general.apply(lambda row :date(row.year,row.month,1),axis=1)
+    df_summary.set_index(u'date_time',inplace=True)
+    
+    # Group results by project year and month
     df_general = df_general.groupby([u'project_name',
                              u'year',
                              u'month'],as_index=False).agg({u'project':'count',
@@ -123,14 +143,14 @@ def get_agg_results(df_general,proj_name=None):
                                                                                              u'%_passed':'mean',
                                                                                              u'earnings':'sum'
                                                                                              }).sort_values(by=[u'earnings'],ascending=False)
-    return df_general, df_results, df_projects
+    return df_summary, df_general, df_results, df_projects
 
 #################################################################
 ## Generate dataframe to calculate General results:
 #################################################################
 def generate_report(df_all):
     '''Generate general numbers and visualizations'''
-    df_general, df_results, df_projects = get_agg_results(df_all.copy())
+    df_summary, df_general, df_results, df_projects = get_agg_results(df_all.copy())
     
     ## Assign colors to projects:
     cmap = matplotlib.cm.get_cmap('Paired')
@@ -138,10 +158,13 @@ def generate_report(df_all):
     project_colors = dict([(projname,cmap(color)) for projname,color in zip(df_projects[u'project_name'].unique(),colors)])
     
     # Calculate general results:
+    general_table = tabulate([list(row) for row in df_summary.round(2).values], headers=list(df_summary.columns),tablefmt="pipe", numalign="center")
+    
+    # Calculate general results by project:
     start_date = df_general.index.min()
     end_date = df_general.index.max()
     summary_table = tabulate([list(row) for row in df_results.round(2).values], headers=list(df_results.columns),tablefmt="pipe", numalign="center")
-    fig, axes = plt.subplots(nrows=2, ncols=1)
+    fig, axes = plt.subplots(nrows=2, ncols=1,figsize=(10,10))
     axes[0] = plot_monthly(df_general,axes[0],u'earnings',project_colors)
     axes[1] = plot_rating(df_all.copy(),axes[1],period)
     monthly_plot_path = config.path_out + 'general.png'
@@ -151,7 +174,7 @@ def generate_report(df_all):
     
     monthly_table = tabulate([list(row) for row in df_projects.round(2).values], headers=list(df_projects.columns),tablefmt="pipe", numalign="center")
     
-    file_text = general_text_body.format(start_date,end_date,summary_table,monthly_plot_path,monthly_table)
+    file_text = general_text_body.format(start_date,end_date,summary_table,monthly_plot_path,monthly_table,general_table)
     project_names = df_projects['project_name'].unique()
     return file_text,project_names,project_colors
 
@@ -161,7 +184,7 @@ def generate_report(df_all):
 def generate_project_report(df_all,project_names,project_colors,file_text):
     '''Generate general numbers and visualizations for the different projects'''
     for project_name in project_names:
-        proj_results,proj_summary,_ = get_agg_results(df_all,proj_name=project_name)
+        _,proj_results,proj_summary,_ = get_agg_results(df_all,proj_name=project_name)
         proj_summary = tabulate([list(row) for row in proj_summary.iloc[:,1:].round(2).values], headers=list(proj_summary.iloc[:,1:].columns),tablefmt="pipe", numalign="center")
         proj_table = tabulate([list(row) for row in proj_results.round(2).values], headers=list(proj_results.columns),tablefmt="pipe", numalign="center")
         fig, axes = plt.subplots(nrows=2, ncols=1)
@@ -183,6 +206,10 @@ general_text_body = """
 In this report it is summarized reviewer's performance for the period: {0} - {1}. Following table presents most aggregated numbers:\n
 
 {2}
+
+Monthly performance is:\n
+{5}
+
 <br />
 Following visualizations show monthly earnings per project and ratings:
 

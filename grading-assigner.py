@@ -35,6 +35,8 @@ REFRESH_URL_TMPL = '{}/submission_requests/{}/refresh.json'
 ASSIGNED_COUNT_URL = '{}/me/submissions/assigned_count.json'.format(BASE_URL)
 ASSIGNED_URL = '{}/me/submissions/assigned.json'.format(BASE_URL)
 
+WAIT_URL = '{}/submission_requests/{}/waits.json'
+
 REVIEW_URL = 'https://review.udacity.com/#!/submissions/{sid}'
 REQUESTS_PER_SECOND = 1 # Please leave this alone.
 
@@ -175,12 +177,12 @@ def projects_to_query(certifications,ids_queued=None):
     else:
         print "\n All projects requested!\n"
         
-def get_positions(certifications,ids_queue,curr_request_id):
+def get_positions(ids_queue,curr_request_id):
     WAITS_URL = '{0}/submission_requests/{1}/waits.json'.format(BASE_URL,curr_request_id)
     wait_resp = requests.get(WAITS_URL, headers=headers)
     wait_resp.raise_for_status()
-    waits = wait_resp.json()
-    print waits
+    wait_request = wait_resp.json()
+    return "Positions: ", wait_request
     
 def retrieve_stats(token,start_date='2010-01-01',end_date=current_date):
     global headers
@@ -191,8 +193,10 @@ def retrieve_stats(token,start_date='2010-01-01',end_date=current_date):
     COMPLETED_URL_TMPL = '{0}/me/submissions/completed?start_date={1}&end_date={2}.json'.format(BASE_URL,start_date,end_date)
     completed_resp = requests.get(COMPLETED_URL_TMPL, headers=headers)
     completed_resp = completed_resp.json() if completed_resp.status_code == 200 else None
-    #pickle.dump( completed_resp, open( "completed.pickle", "wb" ) )
-    
+    if completed_resp is None:
+        print "We can't process your request: Response returns None, check your token, internet connection, etc."
+        return
+        
     # retrieve feedbacks:
     FEEDBACK_URL_TMPL = '{0}/me/student_feedbacks?start_date={1}&end_date={2}.json'.format(BASE_URL,start_date,end_date)
     fb_resp = requests.get(FEEDBACK_URL_TMPL, headers=headers)
@@ -202,18 +206,16 @@ def retrieve_stats(token,start_date='2010-01-01',end_date=current_date):
     #################################################################    
     ## Read input data:
     #################################################################
-    #projects = pickle.load(open('/home/rafaelcastillo/Downloads/completed.pickle','rb'))
     dfproj = pandas.read_json(json.dumps(completed_resp))
     dfproj = dfproj.loc[:,[u'completed_at',u'project',u'price',u'status',u'id',u'is_training',u'result']]
     dfproj = dfproj.rename(columns={u'id':u'submission_id'})
     
-    #fb = pickle.load(open('/home/rafaelcastillo/Downloads/fb.pickle','rb'))
     df_fb = pandas.read_json(json.dumps(fb_resp))
     df_fb = df_fb.loc[:,[u'submission_id',u'rating',u'body',u'created_at']]
     
     ## Merge both dataframes and do the required transformations to create plots and tables:
     df_all =  dfproj.merge(df_fb,how='left',on=u'submission_id')
-    file_text, project_names,project_colors = report_generator.generate_report(df_all.copy())
+    file_text, project_names, project_colors = report_generator.generate_report(df_all.copy())
     file_text = report_generator.generate_project_report(df_all.copy(),project_names,project_colors,file_text)
     file_text += report_generator.project_text_foot
     
@@ -221,7 +223,7 @@ def retrieve_stats(token,start_date='2010-01-01',end_date=current_date):
     f = open(config.path_out + config.file_name + '.md','w')
     f.write(file_text)
     f.close()
-    
+    logger.info("Stats completed!, please visit the report generated.")
     
     
 def request_reviews(token,ids_queued=None):
@@ -268,6 +270,8 @@ def request_reviews(token,ids_queued=None):
                 # expire (1 hour)
                 logger.info('0-0-0-0-0-0-0-0-0-0- refreshing request 0-0-0-0-0-0-0')
                 current_request = refresh_request(current_request)
+                logger.info('Positions: {0}'.format(get_positions(ids_queued,current_request['id'])))
+                
             else:
                 logger.info('Checking for new assignments')
                 # If an assignment has been made since status was last checked,
@@ -275,6 +279,7 @@ def request_reviews(token,ids_queued=None):
                 url = GET_REQUEST_URL_TMPL.format(BASE_URL, current_request['id'])
                 get_req_resp = requests.get(url, headers=headers)
                 current_request = get_req_resp.json() if me_req_resp.status_code == 200 else None
+                logger.info('Positions: {0}'.format(get_positions(ids_queued,current_request['id'])))
 
         current_request = alert_for_assignment(current_request, headers)
         if current_request:
@@ -308,6 +313,6 @@ if __name__ == "__main__":
     if args.certification:
         get_certifications(args.token)
     elif args.stats:
-        retrieve_stats(args.token)   
+        retrieve_stats(args.token)  
     else:    
         request_reviews(args.token, args.ids_queued)
