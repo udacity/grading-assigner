@@ -1,6 +1,5 @@
 # Usage
-Requires the `requests` module, which you can either install globally or in a virtualenv.
-
+Python 2.X version and ```request``` module. ```requirements.txt``` includes other dependencies.
 ```
 usage: grading-assigner.py [-h] [--auth-token TOKEN] [--debug]
                            [--certification]
@@ -49,3 +48,8 @@ Investigate a Dataset                              |  107  | 50.0  |    certifie
 ```
 
 Press ctrl-c to quit.
+
+# Report example:
+
+<img src="Selection_265.jpg" =100x>
+
