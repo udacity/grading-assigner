@@ -51,5 +51,5 @@ Press ctrl-c to quit.
 
 # Report example:
 
-<img src="Selection_265.jpg" =100x>
+<img src="\Selection_265.jpg" =100x>
 
