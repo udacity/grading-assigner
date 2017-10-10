@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 
 utc = pytz.UTC
 
-# Script config
 BASE_URL = 'https://review-api.udacity.com/api/v1'
 CERTS_URL = '{}/me/certifications.json'.format(BASE_URL)
 ME_URL = '{}/me'.format(BASE_URL)
@@ -95,7 +94,7 @@ def fetch_certified_pairs():
     logger.info("Requesting certifications...")
     me_resp = requests.get(ME_URL, headers=headers)
     me_resp.raise_for_status()
-    languages = me_resp.json()['application']['languages'] or ['en-us']
+    languages = me_resp.json()['mentor_languages'] or ['en-us']
 
     certs_resp = requests.get(CERTS_URL, headers=headers)
     certs_resp.raise_for_status()
