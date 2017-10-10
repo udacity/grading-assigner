@@ -24,6 +24,7 @@ PUT_REQUEST_URL_TMPL = '{}/submission_requests/{}.json'
 REFRESH_URL_TMPL = '{}/submission_requests/{}/refresh.json'
 ASSIGNED_COUNT_URL = '{}/me/submissions/assigned_count.json'.format(BASE_URL)
 ASSIGNED_URL = '{}/me/submissions/assigned.json'.format(BASE_URL)
+WAITS_URL_TMPL = '{}/submission_requests/{}/waits.json'
 
 REVIEW_URL = 'https://review.udacity.com/#!/submissions/{sid}'
 REQUESTS_PER_SECOND = 1 # Please leave this alone.
@@ -80,6 +81,16 @@ def refresh_request(current_request):
     else:
         return refresh_resp.json()
 
+def get_wait_request(current_request):
+    logger.debug('Finding wait times of existing request')
+    wait_resp = requests.get(WAITS_URL_TMPL.format(BASE_URL, current_request['id']),
+                                headers=headers)
+    wait_resp.raise_for_status()
+    if wait_resp.status_code == 404:
+        return None
+    else:
+        return wait_resp.json()
+
 def fetch_certified_pairs():
     logger.info("Requesting certifications...")
     me_resp = requests.get(ME_URL, headers=headers)
@@ -124,6 +135,9 @@ def request_reviews(token):
                                         json={'projects': project_language_pairs},
                                         headers=headers)
             current_request = create_resp.json() if create_resp.status_code == 201 else None
+            wait_resp = get_wait_request(current_request)
+            if wait_resp:
+              logger.info('wait: %s', str(wait_resp))
         else:
             logger.info(current_request)
             closing_at = parser.parse(current_request['closed_at'])
@@ -139,6 +153,9 @@ def request_reviews(token):
                 current_request = refresh_request(current_request)
             else:
                 logger.info('Checking for new assignments')
+                wait_resp = get_wait_request(current_request)
+                if wait_resp:
+                  logger.info('wait: %s', str(wait_resp))
                 # If an assignment has been made since status was last checked,
                 # the request record will no longer be 'fulfilled'
                 url = GET_REQUEST_URL_TMPL.format(BASE_URL, current_request['id'])
